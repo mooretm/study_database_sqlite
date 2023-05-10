@@ -1,4 +1,4 @@
-""" Main view for Vesta
+""" Main view
 """
 
 ###########
@@ -14,11 +14,11 @@ from tkinter import messagebox
 # BEGIN #
 #########
 class MainFrame(ttk.Frame):
-    def __init__(self, parent, rows, *args, **kwargs):
+    def __init__(self, parent, studies, _vars, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
 
-        self.rows = rows
-        
+        self.studies = studies
+        self._vars = _vars
 
         # Populate frame with widgets
         self.draw_widgets()
@@ -30,7 +30,8 @@ class MainFrame(ttk.Frame):
         ##########
         # Styles #
         ##########
-        style = ttk.Style()
+        self.style = ttk.Style(self)
+        self.style.configure('Heading.TLabel', font=('', 16))
 
 
         #################
@@ -46,46 +47,47 @@ class MainFrame(ttk.Frame):
         ##################
         # Create Widgets #
         ##################
-        columns = ('irb_ref', 'study_name', 'full_name', 'date_created')
+        ttk.Label(self.frm_main, style='Heading.TLabel',
+                  text="Study Records").grid(
+            column=5, row=5, pady=(0,5))
 
+
+        ###############
+        # Tree Widget #
+        ###############
+        columns = ('study_id', 'irb_ref', 'study_name', 'study_type', 'full_name', 'date_created', 'date_closed')
         self.tree = ttk.Treeview(self.frm_main, columns=columns, show='headings')
+        # Headings
+        self.tree.heading('study_id', text="ID")
         self.tree.heading('irb_ref', text="IRB Ref.")
         self.tree.heading('study_name', text="Study Name")
-        self.tree.heading('full_name', text='Lead')
+        self.tree.heading('study_type', text="Study Type")
+        self.tree.heading('full_name', text='Researcher')
         self.tree.heading('date_created', text="Created")
-
-        self.tree.column("irb_ref", width=80, stretch=False)
-        self.tree.column("study_name", width=350, stretch=False)
+        self.tree.heading('date_closed', text="Closed")
+        # Columns
+        self.tree.column("study_id", width=30, stretch=False)
+        self.tree.column("irb_ref", width=70, stretch=False)
+        self.tree.column("study_name", width=300, stretch=False)
+        self.tree.column("study_type", width=70, stretch=False)
         self.tree.column("full_name", width=100, stretch=False)
-        self.tree.column("date_created", width=100, stretch=False)
+        self.tree.column("date_created", width=70, stretch=False)
+        self.tree.column("date_closed", width=70, stretch=False)
 
-        # Create fake data
-        samples = []
-        for n in range(1,100):
-            samples.append((
-                f'irb {n}',
-                f'lead {n}',
-                f'created {n}',
-                f'closed {n}'
-            ))
-
-        # Insert data into tree
-        #for sample in samples:
-        #    self.tree.insert('', tk.END, values=sample)
-
-        for row in self.rows:
+        # Load data into tree
+        for row in self.studies:
             self.tree.insert('', tk.END, values=row)
-
 
         # Bind function to tree
         self.tree.bind('<<TreeviewSelect>>', self.item_selected)
 
-        self.tree.grid(row=0, column=0, sticky='nsew')
+        # Display tree
+        self.tree.grid(row=10, column=5, sticky='nsew')
 
         # Add vertical scrollbar
         scrollbar = ttk.Scrollbar(self.frm_main, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscroll=scrollbar.set)
-        scrollbar.grid(row=0, column=1, sticky='ns')
+        scrollbar.grid(row=10, column=6, sticky='ns')
 
         # KNOWN ISSUE WITH HORIZONTAL SCROLLING WITH TREEVIEW
         # scrollbar_x = ttk.Scrollbar(self.frm_main, orient=tk.HORIZONTAL, command=self.tree.xview)
@@ -101,9 +103,18 @@ class MainFrame(ttk.Frame):
 
 
     def item_selected(self, event):
+        """ Bound function to Studies treeview that retrieves
+            study details and send event to controller to 
+            display study editing window.
+        """
+        # Retrieve study details
         for selected_item in self.tree.selection():
             item = self.tree.item(selected_item)
             record = item['values']
-            messagebox.showinfo(
-                title="Information",
-                message=','.join(record))
+
+        # Load study details into _vars
+        for ii, key in enumerate(self._vars):
+            self._vars[key].set(record[ii])
+
+        # Send item select event to controller
+        self.event_generate('<<MainTreeSelection>>')

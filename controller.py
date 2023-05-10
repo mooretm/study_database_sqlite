@@ -29,7 +29,6 @@ from menus import mainmenu
 from functions import resource_path
 # Model imports
 from models import sessionmodel
-from models import audiomodel
 from models import calmodel
 from models import csvmodel
 from models import updatermodel
@@ -39,6 +38,7 @@ from views import mainview
 from views import sessionview
 from views import audioview
 from views import calibrationview
+from views import studyview
 
 
 #########
@@ -55,13 +55,27 @@ class Application(tk.Tk):
         #############
         self.NAME = 'Clinical Study Database'
         self.VERSION = '0.0.0'
-        self.EDITED = 'May 2, 2023'
+        self.EDITED = 'May 10, 2023'
 
         # Create menu settings dictionary
         self._menu_settings = {
             'name': self.NAME,
             'version': self.VERSION,
             'last_edited': self.EDITED
+        }
+
+
+        ##################
+        # Variables Dict #
+        ##################
+        self._vars = {
+            'study_id': tk.IntVar(),
+            'irb_ref': tk.StringVar(),
+            'study_name': tk.StringVar(),
+            'study_type': tk.StringVar(),
+            'researcher_id': tk.StringVar(),
+            'date_created': tk.StringVar(),
+            'date_closed': tk.StringVar(),
         }
 
 
@@ -93,15 +107,26 @@ class Application(tk.Tk):
         database = r"C:\Users\MooTra\OneDrive - Starkey\Desktop\IRB_Tracking.db"
         self.db = dbmodel.DBModel()
         self.conn = self.db.create_connection(database)
-        # Select all open studies
-        with self.conn:
-            self.rows = self.db.select_all_open_studies2(self.conn)
+
+        self._get_record_values()
 
         # Load main view
         self.grid_columnconfigure(0, weight=1) # center widget
         self.grid_rowconfigure(0, weight=1) # center widget
-        self.mainview = mainview.MainFrame(self, self.rows)
+        self.mainview = mainview.MainFrame(self, self.all_studies, self._vars)
         self.mainview.grid(row=0, column=0)
+
+        # Display open study count
+        self.open_study_count = tk.StringVar(value=f"Open Studies: {len(self.open_studies)}")
+        ttk.Label(self, 
+                  textvariable=self.open_study_count).grid(
+            column=0, row=15, sticky='w', padx=10)
+
+        # Display total study count
+        self.total_study_count = tk.StringVar(value=f"Total Studies: {len(self.all_studies)}")
+        ttk.Label(self, 
+                  textvariable=self.total_study_count).grid(
+            column=0, row=20, sticky='w', padx=10, pady=(0,10))
 
         # Load menus
         menu = mainmenu.MainMenu(self, self._menu_settings)
@@ -110,6 +135,7 @@ class Application(tk.Tk):
         # Create callback dictionary
         event_callbacks = {
             # File menu
+            '<<FileNewStudy>>': lambda _: self.show_new_study_view(),
             '<<FileSession>>': lambda _: self._show_session_dialog(),
             '<<FileQuit>>': lambda _: self._quit(),
 
@@ -119,6 +145,13 @@ class Application(tk.Tk):
 
             # Help menu
             '<<Help>>': lambda _: self._show_help(),
+
+            # Main view commands
+            '<<MainTreeSelection>>': lambda _: self.show_edit_study_view(),
+
+            # Study view commands
+            '<<StudyViewSubmitEdit>>': lambda _: self.save_study_edits(),
+            '<<StudyViewSubmitNew>>': lambda _: self.create_new_study(),
 
             # Session dialog commands
             '<<SessionSubmit>>': lambda _: self._save_sessionpars(),
@@ -130,9 +163,6 @@ class Application(tk.Tk):
 
             # Audio dialog commands
             '<<AudioDialogSubmit>>': lambda _: self._save_sessionpars(),
-
-            # Main View commands
-            '<<MainSave>>': lambda _: self._on_save()
         }
 
         # Bind callbacks to sequences
@@ -165,6 +195,14 @@ class Application(tk.Tk):
         self.deiconify()
 
 
+    def _get_record_values(self):
+        # Select all open studies
+        with self.conn:
+            self.open_studies = self.db.select_open_studies(self.conn)
+            self.all_studies = self.db.select_all_studies(self.conn)
+            self.researchers = dict(self.db.select_active_researchers(self.conn))
+
+
     def _quit(self):
         """ Disconnect device(s), if possible.
             Exit the application.
@@ -173,9 +211,26 @@ class Application(tk.Tk):
         self.destroy()
 
 
-    ########################
+    #######################
+    # File Menu Functions #
+    #######################
+    def show_new_study_view(self):
+        """ Show record view
+        """
+        # Reset self._vars
+        for var in self._vars:
+            self._vars[var].set('')
+
+        self._vars['study_id'].set(0)
+        
+        # Create and display window
+        print('\ncontroller: Calling new study view')
+        studyview.StudyView(self, 'new', self._vars, self.researchers)
+
+
+    #######################
     # Main View Functions #
-    ########################
+    #######################
     def _on_save(self):
         """ Format values and send to csv model.
         """
@@ -185,8 +240,97 @@ class Application(tk.Tk):
             data[key] = self.sessionpars[key].get()
 
         # Save data
-        print('controller: Calling save record function...')
+        print('controller: Calling save record function')
         self.csvmodel.save_record(data)
+
+
+    def show_edit_study_view(self):
+        """ Show record view
+        """
+        # Create and display window
+        print('\ncontroller: Calling edit study view')
+        studyview.StudyView(self, 'edit', self._vars, self.researchers)
+
+
+    ########################
+    # Study View Functions #
+    ########################
+    def _prepare_study_vars(self):
+        # Convert full name to researcher id
+        self._get_researcher_id_from_name()
+
+        # Create list of vars
+        vals = self._create_list_from_vars(self._vars)
+
+        # Move study_id from first position to last in list
+        vals = vals[1:] + [vals[0]]
+
+        return vals
+
+
+    def _get_researcher_id_from_name(self):
+        # Replace researcher full name with id
+        try:
+            id = int(self.researchers[self._vars['researcher_id'].get()])
+            self._vars['researcher_id'].set(id)
+        except KeyError:
+            pass
+
+
+    def _create_list_from_vars(self, vars):
+        # Create list of _vars values
+        vals = []
+        for var in vars:
+            # Check for NULLs
+            x = vars[var].get()
+            if (x == "None") or (x == ""):
+                x = None
+            vals.append(x)
+
+        return vals
+
+
+    def refresh_view(self):
+        # Repull generic values
+        self._get_record_values()
+
+        self.open_study_count.set(f"Open Studies: {len(self.open_studies)}")
+        self.total_study_count.set(f"Total Studies: {len(self.all_studies)}")
+
+        # Delete data from mainview tree
+        for row in self.mainview.tree.get_children():
+            self.mainview.tree.delete(row)
+
+        # Load data into tree
+        for row in self.all_studies:
+            self.mainview.tree.insert('', tk.END, values=row)
+
+
+    def create_new_study(self):
+        # Prepare study vars for database
+        vals = self._prepare_study_vars()
+
+        # Drop study_id from list
+        vals.pop(6)
+
+        # Update record
+        with self.conn:
+            self.db.create_study(self.conn, vals)
+
+        # Refresh record tree
+        self.refresh_view()
+
+
+    def save_study_edits(self):
+        # Prepare study vars for database
+        vals = self._prepare_study_vars()
+
+        # Update record
+        with self.conn:
+            self.db.update_study(self.conn, vals)
+
+        # Refresh record tree
+        self.refresh_view()
 
 
     ############################

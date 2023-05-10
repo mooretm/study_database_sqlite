@@ -21,6 +21,7 @@ class MainMenu(tk.Menu):
         #self.bind_all('<space>', self._event('<<PlaybackStart>>'))
         #self.bind_all('<Control-c>', self._event('<<PlaybackStop>>'))
         self.bind_all('<Control-q>', self._event('<<FileQuit>>'))
+        self.bind_all('<Control-n>', self._event('<<FileNewStudy>>'))
 
 
     def __init__(self, parent, settings, **kwargs):
@@ -34,9 +35,14 @@ class MainMenu(tk.Menu):
         #############
         file_menu = tk.Menu(self, tearoff=False)
         file_menu.add_command(
-            label="Session Info...",
-            command=self._event('<<FileSession>>')
+            label="New Record...",
+            command=self._event('<<FileNewStudy>>'),
+            accelerator='Ctrl+N'
         )
+        # file_menu.add_command(
+        #     label="Session Info...",
+        #     command=self._event('<<FileSession>>')
+        # )
         file_menu.add_separator()
         file_menu.add_command(
             label="Quit",
@@ -61,24 +67,6 @@ class MainMenu(tk.Menu):
         )
         # Add Tools menu to the menubar
         self.add_cascade(label="Tools", menu=tools_menu)
-
-
-        #################
-        # Playback Menu #
-        #################
-        # playback_menu = tk.Menu(self, tearoff=False)
-        # playback_menu.add_command(
-        #     label="Start Audio",
-        #     command=self._event('<<PlaybackStart>>'),
-        #     accelerator='Spacebar'
-        # )
-        # playback_menu.add_separator()
-        # playback_menu.add_command(
-        #     label="Stop Audio",
-        #     command=self._event('<<PlaybackStop>>'),
-        #     accelerator='Ctrl+C'
-        # )
-        # self.add_cascade(label='Playback', menu=playback_menu)
 
 
         #############
@@ -113,7 +101,7 @@ class MainMenu(tk.Menu):
         about_detail = (
             'Written by: Travis M. Moore\n' +
             'Version {}\n'.format(self._settings['version']) +
-            'Created: June 23, 2022\n'
+            'Created: May 2, 2023\n'
             'Last edited: {}'.format(self._settings['last_edited'])
         )
         messagebox.showinfo(
