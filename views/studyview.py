@@ -89,9 +89,18 @@ class StudyView(tk.Toplevel):
         # Study type
         ttk.Label(self.frm_main, text="Study Type:").grid(
             column=5, row=15, **small_padding)
-        ttk.Combobox(self.frm_main, values=self.study_types, 
+        self.cmbo_study_type = ttk.Combobox(self.frm_main, values=self.study_types, 
             state='readonly', width=17,
-            textvariable=self._vars['study_type']).grid(column=10, row=15)
+            textvariable=self._vars['study_type'])
+        self.cmbo_study_type.grid(column=10, row=15)
+
+        # Parent study
+        ttk.Label(self.frm_main, text="Parent:").grid(
+            column=5, row=17, **small_padding)
+        self.cmbo_parent = ttk.Combobox(self.frm_main, values=self.study_types, 
+            state='disabled', width=17, 
+            textvariable=self._vars['study_type'])
+        self.cmbo_parent.grid(column=10, row=17)
 
         # Researchers
         ttk.Label(self.frm_main, text="Researcher:").grid(
@@ -118,11 +127,27 @@ class StudyView(tk.Toplevel):
         date_entry.DateEntry(self.frm_main, 
             textvariable=self._vars['date_closed']).grid(column=10, row=30)
         ttk.Label(self.frm_main, text="(YYYY-MM-DD)").grid(
-            column=15, row=30, **small_padding)  
+            column=15, row=30, **small_padding)
+
+        # Date expires
+        ttk.Label(self.frm_main, text="Expiration Date:").grid(
+            column=5, row=35, **small_padding)
+        # ttk.Entry(self.frm_main, 
+        #     textvariable=self._vars['date_closed']).grid(column=10, row=30)
+        self.cmbo_expires = date_entry.DateEntry(self.frm_main, state='disabled',
+            textvariable=self._vars['date_closed'])
+        self.cmbo_expires.grid(column=10, row=35)
+        ttk.Label(self.frm_main, text="(YYYY-MM-DD)").grid(
+            column=15, row=35, **small_padding) 
 
         # Submit button
         ttk.Button(self.frm_button, text="Submit", 
             command=self._on_submit).grid(column=5, row=5)
+        
+        #####################
+        # Function Bindings #
+        #####################
+        self.cmbo_study_type.bind("<<ComboboxSelected>>", self.check_study_type)
 
 
     #################
@@ -139,6 +164,16 @@ class StudyView(tk.Toplevel):
         y = screen_height/2 - size[1]/2
         self.geometry("+%d+%d" % (x, y))
         self.deiconify()
+
+
+    def check_study_type(self, *args):
+        if self.cmbo_study_type.get() == 'Main Study':
+            self.cmbo_expires.config(state='enabled')
+            self.cmbo_parent.config(state='disabled')
+        else:
+            self.cmbo_expires.config(state='disabled')
+            self.cmbo_parent.config(state='enabled')
+            self.cmbo_parent.config(state='readonly')
 
 
     def _on_submit(self):
