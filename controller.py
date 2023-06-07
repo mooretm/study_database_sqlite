@@ -14,9 +14,6 @@ from tkinter import messagebox
 
 # Import system packages
 import os
-import sys
-from pathlib import Path
-import time
 
 # Import misc packages
 import webbrowser
@@ -34,11 +31,12 @@ from models import csvmodel
 from models import updatermodel
 from models import dbmodel
 # View imports
-from views import mainview
+from views import study_tabview
+from views import amendment_tabview
 from views import sessionview
 from views import audioview
 from views import calibrationview
-from views import studyview
+from views import study_recordview
 
 
 #########
@@ -55,7 +53,7 @@ class Application(tk.Tk):
         #############
         self.NAME = 'Clinical Study Database'
         self.VERSION = '0.0.0'
-        self.EDITED = 'May 10, 2023'
+        self.EDITED = 'June 07, 2023'
 
         # Create menu settings dictionary
         self._menu_settings = {
@@ -65,10 +63,10 @@ class Application(tk.Tk):
         }
 
 
-        ##################
-        # Variables Dict #
-        ##################
-        self._vars = {
+        ###################
+        # Variables Dicts #
+        ###################
+        self._studyvars = {
             'study_id': tk.IntVar(),
             'irb_ref': tk.StringVar(),
             'study_name': tk.StringVar(),
@@ -76,6 +74,14 @@ class Application(tk.Tk):
             'researcher_id': tk.StringVar(),
             'date_created': tk.StringVar(),
             'date_closed': tk.StringVar(),
+        }
+
+        self._amendvars = {
+            'study_name': tk.StringVar(),
+            'amend_id': tk.IntVar(),
+            'submit_date': tk.StringVar(),
+            'approval_date': tk.StringVar(),
+            'rationale': tk.StringVar(),
         }
 
 
@@ -86,6 +92,9 @@ class Application(tk.Tk):
         self.withdraw() # Hide window during setup
         self.resizable(False, False)
         self.title(self.NAME)
+
+        self.grid_columnconfigure(0, weight=1) # center widget
+        #self.grid_rowconfigure(0, weight=1) # center widget
 
         # Assign special quit function on window close
         # Used to close Vulcan session cleanly even if 
@@ -110,23 +119,39 @@ class Application(tk.Tk):
 
         self._get_record_values()
 
+        # Title label
+        ttk.Label(self, style='Heading.TLabel',
+                  text="Clinical Study Database").grid(
+            column=5, row=2, pady=(5,0))
+
+        # Create notebook
+        self.notebook = ttk.Notebook(self)
+        self.notebook.grid(row=5, column=5, padx=10)
+
         # Load main view
-        self.grid_columnconfigure(0, weight=1) # center widget
-        self.grid_rowconfigure(0, weight=1) # center widget
-        self.mainview = mainview.MainFrame(self, self.all_studies, self._vars)
+        self.mainview = study_tabview.MainFrame(self.notebook, self.all_studies, self._studyvars)
         self.mainview.grid(row=0, column=0)
+
+        # Load amendment view
+        self.amendmentview = amendment_tabview.AmendmentFrame(self.notebook, self.all_studies, self._amendvars)
+        self.amendmentview.grid(row=0, column=0)
+
+        # Populate notebook tabs
+        self.notebook.add(self.mainview, text="Studies")
+        self.notebook.add(self.amendmentview, text="Amendments")
 
         # Display open study count
         self.open_study_count = tk.StringVar(value=f"Open Studies: {len(self.open_studies)}")
-        ttk.Label(self, 
-                  textvariable=self.open_study_count).grid(
-            column=0, row=15, sticky='w', padx=10)
+        ttk.Label(
+            self, textvariable=self.open_study_count).grid(
+            column=5, row=15, sticky='w', padx=10
+        )
 
         # Display total study count
         self.total_study_count = tk.StringVar(value=f"Total Studies: {len(self.all_studies)}")
         ttk.Label(self, 
                   textvariable=self.total_study_count).grid(
-            column=0, row=20, sticky='w', padx=10, pady=(0,10))
+            column=5, row=20, sticky='w', padx=10, pady=(0,10))
 
         # Load menus
         menu = mainmenu.MainMenu(self, self._menu_settings)
@@ -148,6 +173,10 @@ class Application(tk.Tk):
 
             # Main view commands
             '<<MainTreeSelection>>': lambda _: self.show_edit_study_view(),
+
+            # Amendment view commands
+            '<<AmendmentStudySelected>>': lambda _: self._populate_amendments(),
+            '<<AmendmentTreeSelection>>': lambda _: self.show_edit_amendment_view(),
 
             # Study view commands
             '<<StudyViewSubmitEdit>>': lambda _: self.save_study_edits(),
@@ -217,15 +246,15 @@ class Application(tk.Tk):
     def show_new_study_view(self):
         """ Show record view
         """
-        # Reset self._vars
-        for var in self._vars:
-            self._vars[var].set('')
+        # Reset self._studyvars
+        for var in self._studyvars:
+            self._studyvars[var].set('')
 
-        self._vars['study_id'].set(0)
+        self._studyvars['study_id'].set(0)
         
         # Create and display window
         print('\ncontroller: Calling new study view')
-        studyview.StudyView(self, 'new', self._vars, self.researchers)
+        study_recordview.StudyView(self, 'new', self._studyvars, self.researchers)
 
 
     #######################
@@ -249,7 +278,31 @@ class Application(tk.Tk):
         """
         # Create and display window
         print('\ncontroller: Calling edit study view')
-        studyview.StudyView(self, 'edit', self._vars, self.researchers)
+        study_recordview.StudyView(self, 'edit', self._studyvars, self.researchers)
+
+
+    #############################
+    # Amendments View Functions #
+    #############################
+    def _populate_amendments(self):
+        """ Get list of amendments for selected study.
+        """
+        # Get study id based on name of selected study
+        id = self.db.get_studyid_from_name(self.conn, [self._amendvars['study_name'].get()])
+        # Extract id from [(int,)]
+        id = id[0][0]
+
+        # Call select amendments query
+        with self.conn:
+            rows = self.db.select_amendments(self.conn, [id])
+        # Drop final value from each tuple
+        amendments = [x[0:4] for x in rows]
+        # Populate tree with amendments
+        self.amendmentview._populate_tree(amendments)
+
+
+    def show_edit_amendment_view(self):
+        print("\nShow amendment edit view")
 
 
     ########################
@@ -260,7 +313,7 @@ class Application(tk.Tk):
         self._get_researcher_id_from_name()
 
         # Create list of vars
-        vals = self._create_list_from_vars(self._vars)
+        vals = self._create_list_from_vars(self._studyvars)
 
         # Move study_id from first position to last in list
         vals = vals[1:] + [vals[0]]
@@ -271,14 +324,14 @@ class Application(tk.Tk):
     def _get_researcher_id_from_name(self):
         # Replace researcher full name with id
         try:
-            id = int(self.researchers[self._vars['researcher_id'].get()])
-            self._vars['researcher_id'].set(id)
+            id = int(self.researchers[self._studyvars['researcher_id'].get()])
+            self._studyvars['researcher_id'].set(id)
         except KeyError:
             pass
 
 
     def _create_list_from_vars(self, vars):
-        # Create list of _vars values
+        # Create list of _studyvars values
         vals = []
         for var in vars:
             # Check for NULLs

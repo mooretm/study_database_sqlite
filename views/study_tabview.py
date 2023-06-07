@@ -1,4 +1,4 @@
-""" Main view
+""" Studies (main) notebook view
 """
 
 ###########
@@ -14,11 +14,11 @@ from tkinter import messagebox
 # BEGIN #
 #########
 class MainFrame(ttk.Frame):
-    def __init__(self, parent, studies, _vars, *args, **kwargs):
+    def __init__(self, parent, studies, _studyvars, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
 
         self.studies = studies
-        self._vars = _vars
+        self._studyvars = _studyvars
 
         # Populate frame with widgets
         self.draw_widgets()
@@ -42,14 +42,6 @@ class MainFrame(ttk.Frame):
         # Main container
         self.frm_main = ttk.Frame(self)
         self.frm_main.grid(column=5, row=5, **options)
-
-
-        ##################
-        # Create Widgets #
-        ##################
-        ttk.Label(self.frm_main, style='Heading.TLabel',
-                  text="Study Records").grid(
-            column=5, row=5, pady=(0,5))
 
 
         ###############
@@ -82,7 +74,7 @@ class MainFrame(ttk.Frame):
         self.tree.bind('<<TreeviewSelect>>', self.item_selected)
 
         # Display tree
-        self.tree.grid(row=10, column=5, sticky='nsew')
+        self.tree.grid(row=10, column=5)
 
         # Add vertical scrollbar
         scrollbar = ttk.Scrollbar(self.frm_main, orient=tk.VERTICAL, command=self.tree.yview)
@@ -112,9 +104,9 @@ class MainFrame(ttk.Frame):
             item = self.tree.item(selected_item)
             record = item['values']
 
-        # Load study details into _vars
-        for ii, key in enumerate(self._vars):
-            self._vars[key].set(record[ii])
+        # Load study details into _studyvars
+        for ii, key in enumerate(self._studyvars):
+            self._studyvars[key].set(record[ii])
 
         # Send item select event to controller
         self.event_generate('<<MainTreeSelection>>')
