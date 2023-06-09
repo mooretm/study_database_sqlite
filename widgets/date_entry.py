@@ -25,7 +25,7 @@ class DateEntry(validatedmixin.ValidatedMixin, ttk.Entry):
     def _focusout_validate(self, event):
         valid = True
         # if not self.get():
-        #     self.error.set('A valud is required')
+        #     self.error.set('A value is required')
         #     valid = False
         try:
             datetime.strptime(self.get(), '%Y-%m-%d')

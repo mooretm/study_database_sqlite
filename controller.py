@@ -32,11 +32,9 @@ from models import updatermodel
 from models import dbmodel
 # View imports
 from views import study_tabview
-from views import amendment_tabview
-from views import sessionview
-from views import audioview
-from views import calibrationview
 from views import study_recordview
+from views import amendment_tabview
+from views import amendment_recordview
 
 
 #########
@@ -113,7 +111,7 @@ class Application(tk.Tk):
         self.calmodel = calmodel.CalModel(self.sessionpars)
 
         # Load database model
-        database = r"C:\Users\MooTra\OneDrive - Starkey\Desktop\IRB_Tracking.db"
+        database = r"C:\Users\MooTra\OneDrive - Starkey\Desktop\Clinical_Studies.db"
         self.db = dbmodel.DBModel()
         self.conn = self.db.create_connection(database)
 
@@ -129,11 +127,13 @@ class Application(tk.Tk):
         self.notebook.grid(row=5, column=5, padx=10)
 
         # Load main view
-        self.mainview = study_tabview.MainFrame(self.notebook, self.all_studies, self._studyvars)
+        self.mainview = study_tabview.MainFrame(self.notebook, 
+            self.all_studies, self._studyvars)
         self.mainview.grid(row=0, column=0)
 
         # Load amendment view
-        self.amendmentview = amendment_tabview.AmendmentFrame(self.notebook, self.all_studies, self._amendvars)
+        self.amendmentview = amendment_tabview.AmendmentFrame(self.notebook, 
+            self.all_studies, self._amendvars)
         self.amendmentview.grid(row=0, column=0)
 
         # Populate notebook tabs
@@ -141,14 +141,16 @@ class Application(tk.Tk):
         self.notebook.add(self.amendmentview, text="Amendments")
 
         # Display open study count
-        self.open_study_count = tk.StringVar(value=f"Open Studies: {len(self.open_studies)}")
+        self.open_study_count = tk.StringVar(
+            value=f"Open Studies: {len(self.open_studies)}")
         ttk.Label(
             self, textvariable=self.open_study_count).grid(
             column=5, row=15, sticky='w', padx=10
         )
 
         # Display total study count
-        self.total_study_count = tk.StringVar(value=f"Total Studies: {len(self.all_studies)}")
+        self.total_study_count = tk.StringVar(
+            value=f"Total Studies: {len(self.all_studies)}")
         ttk.Label(self, 
                   textvariable=self.total_study_count).grid(
             column=5, row=20, sticky='w', padx=10, pady=(0,10))
@@ -160,38 +162,30 @@ class Application(tk.Tk):
         # Create callback dictionary
         event_callbacks = {
             # File menu
+            '<<FileNewAmendment>>': lambda _: self.show_new_amendment_view(),
             '<<FileNewStudy>>': lambda _: self.show_new_study_view(),
-            '<<FileSession>>': lambda _: self._show_session_dialog(),
             '<<FileQuit>>': lambda _: self._quit(),
-
-            # Tools menu
-            '<<ToolsAudioSettings>>': lambda _: self._show_audio_dialog(),
-            '<<ToolsCalibration>>': lambda _: self._show_calibration_dialog(),
 
             # Help menu
             '<<Help>>': lambda _: self._show_help(),
 
-            # Main view commands
+            # Study tab view commands
             '<<MainTreeSelection>>': lambda _: self.show_edit_study_view(),
 
-            # Amendment view commands
-            '<<AmendmentStudySelected>>': lambda _: self._populate_amendments(),
-            '<<AmendmentTreeSelection>>': lambda _: self.show_edit_amendment_view(),
-
-            # Study view commands
+            # Study record view commands
             '<<StudyViewSubmitEdit>>': lambda _: self.save_study_edits(),
             '<<StudyViewSubmitNew>>': lambda _: self.create_new_study(),
 
+            # Amendment tab view commands
+            '<<AmendmentStudySelected>>': lambda _: self._populate_amendments(),
+            '<<AmendmentTreeSelection>>': lambda _: self.show_edit_amendment_view(),
+
+            # Amendment record view commands
+            '<<AmendmentSubmitEdit>>': lambda _: self.save_amendment_edits(),
+            '<<AmendmentSubmitNew>>': lambda _: self.create_new_amendment(),
+
             # Session dialog commands
             '<<SessionSubmit>>': lambda _: self._save_sessionpars(),
-
-            # Calibration dialog commands
-            '<<CalPlay>>': lambda _: self.play_calibration_file(),
-            '<<CalStop>>': lambda _: self.stop_calibration_file(),
-            '<<CalibrationSubmit>>': lambda _: self._calc_level(),
-
-            # Audio dialog commands
-            '<<AudioDialogSubmit>>': lambda _: self._save_sessionpars(),
         }
 
         # Bind callbacks to sequences
@@ -229,7 +223,9 @@ class Application(tk.Tk):
         with self.conn:
             self.open_studies = self.db.select_open_studies(self.conn)
             self.all_studies = self.db.select_all_studies(self.conn)
-            self.researchers = dict(self.db.select_active_researchers(self.conn))
+            self.researchers = dict(
+                self.db.select_active_researchers(self.conn)
+                )
 
 
     def _quit(self):
@@ -243,6 +239,20 @@ class Application(tk.Tk):
     #######################
     # File Menu Functions #
     #######################
+    def show_new_amendment_view(self):
+        """ Show amendment edit view
+        """
+        # Reset self._amendvars
+        for var in self._amendvars:
+            self._amendvars[var].set('')
+
+        self._amendvars['amend_id'].set(0)
+        
+        # Create and display window
+        print('\ncontroller: Calling new amendment view')
+        amendment_recordview.AmendmentRecordView(self, 'new', self._amendvars, self.all_studies)
+        
+
     def show_new_study_view(self):
         """ Show record view
         """
@@ -254,12 +264,13 @@ class Application(tk.Tk):
         
         # Create and display window
         print('\ncontroller: Calling new study view')
-        study_recordview.StudyView(self, 'new', self._studyvars, self.researchers)
+        study_recordview.StudyView(self, 'new', self._studyvars, 
+            self.researchers)
 
 
-    #######################
-    # Main View Functions #
-    #######################
+    ############################
+    # Study Tab View Functions #
+    ############################
     def _on_save(self):
         """ Format values and send to csv model.
         """
@@ -278,17 +289,19 @@ class Application(tk.Tk):
         """
         # Create and display window
         print('\ncontroller: Calling edit study view')
-        study_recordview.StudyView(self, 'edit', self._studyvars, self.researchers)
+        study_recordview.StudyView(self, 'edit', self._studyvars, 
+            self.researchers)
 
 
-    #############################
-    # Amendments View Functions #
-    #############################
+    #################################
+    # Amendments Tab View Functions #
+    #################################
     def _populate_amendments(self):
         """ Get list of amendments for selected study.
         """
         # Get study id based on name of selected study
-        id = self.db.get_studyid_from_name(self.conn, [self._amendvars['study_name'].get()])
+        id = self.db.get_studyid_from_name(self.conn, 
+            [self._amendvars['study_name'].get()])
         # Extract id from [(int,)]
         id = id[0][0]
 
@@ -302,25 +315,15 @@ class Application(tk.Tk):
 
 
     def show_edit_amendment_view(self):
-        print("\nShow amendment edit view")
+        # Create and display window
+        print('\ncontroller: Calling edit amendment view')
+        amendment_recordview.AmendmentRecordView(self, 'edit', 
+            self._amendvars, self.all_studies)
+        
 
-
-    ########################
-    # Study View Functions #
-    ########################
-    def _prepare_study_vars(self):
-        # Convert full name to researcher id
-        self._get_researcher_id_from_name()
-
-        # Create list of vars
-        vals = self._create_list_from_vars(self._studyvars)
-
-        # Move study_id from first position to last in list
-        vals = vals[1:] + [vals[0]]
-
-        return vals
-
-
+    ###############################
+    # Study Record View Functions #
+    ###############################
     def _get_researcher_id_from_name(self):
         # Replace researcher full name with id
         try:
@@ -342,6 +345,19 @@ class Application(tk.Tk):
 
         return vals
 
+
+    def _prepare_study_vars(self):
+        # Convert full name to researcher id
+        self._get_researcher_id_from_name()
+
+        # Create list of vars
+        vals = self._create_list_from_vars(self._studyvars)
+
+        # Move study_id from first position to last in list
+        vals = vals[1:] + [vals[0]]
+
+        return vals
+    
 
     def refresh_view(self):
         # Repull generic values
@@ -375,7 +391,7 @@ class Application(tk.Tk):
 
 
     def save_study_edits(self):
-        # Prepare study vars for database
+        # Prepare _studyvars for database
         vals = self._prepare_study_vars()
 
         # Update record
@@ -386,16 +402,67 @@ class Application(tk.Tk):
         self.refresh_view()
 
 
+    ####################################
+    # Amendments Record View Functions #
+    ####################################
+    def save_amendment_edits(self):
+        # Prepare _amendvars for database
+        vals = self._create_list_from_vars(self._amendvars)
+
+        # Remove study name
+        vals.pop(0)
+
+        # Get study id based on name of selected study
+        id = self.db.get_studyid_from_name(self.conn, 
+            [self._amendvars['study_name'].get()])
+        # Extract id from [(int,)]
+        id = id[0][0]
+
+        # Add study id to end of values list
+        vals.append(id)
+
+        # Move amend_id from first position to last in list
+        vals = vals[1:] + [vals[0]]
+
+        # Update record
+        with self.conn:
+            self.db.update_amendment(self.conn, vals)
+
+        # Refresh amendment tree
+        self._populate_amendments()
+
+
+    def create_new_amendment(self):
+        print("\ncontroller: Creating new amendment...")
+        # Prepare _amendvars for database
+        vals = self._create_list_from_vars(self._amendvars)
+
+        # Get study id based on name of selected study
+        id = self.db.get_studyid_from_name(self.conn, 
+            [self._amendvars['study_name'].get()])
+        # Extract id from [(int,)]
+        id = id[0][0]
+
+        # Add study id to end of values list
+        vals.append(id)
+
+        # Remove study name and empty amend_id from list
+        vals = vals[2:]
+
+        print("\nAmendment values to be sent to database as new amendment.")
+        print(vals)
+
+        # Create amendment
+        with self.conn:
+            self.db.create_amendment(self.conn, vals)
+
+        # Refresh amendment tree
+        self._populate_amendments()
+
+
     ############################
     # Session Dialog Functions #
     ############################
-    def _show_session_dialog(self):
-        """ Show session parameter dialog
-        """
-        print("\ncontroller: Calling session dialog...")
-        sessionview.SessionDialog(self, self.sessionpars)
-
-
     def _load_sessionpars(self):
         """ Load parameters into self.sessionpars dict 
         """
@@ -422,50 +489,6 @@ class Application(tk.Tk):
         for key, variable in self.sessionpars.items():
             self.sessionpars_model.set(key, variable.get())
             self.sessionpars_model.save()
-
-
-    ########################
-    # Tools Menu Functions #
-    ########################
-    def _show_audio_dialog(self):
-        """ Show audio settings dialog
-        """
-        print("\ncontroller: Calling audio dialog...")
-        audioview.AudioDialog(self, self.sessionpars)
-
-    def _show_calibration_dialog(self):
-        """ Display the calibration dialog window
-        """
-        print("\ncontroller: Calling calibration dialog...")
-        calibrationview.CalibrationDialog(self, self.sessionpars)
-
-
-    ################################
-    # Calibration Dialog Functions #
-    ################################
-    def play_calibration_file(self):
-        """ Load calibration file and present
-        """
-        # Get calibration file
-        self.calmodel._get_cal_file()
-
-        # Play calibration file
-        self.calmodel.play_cal()
-
-
-    def stop_calibration_file(self):
-        """ Stop playback of calibration file
-        """
-        # Stop calibration playback
-        self.calmodel.stop_cal()
-
-
-    def _calc_level(self):
-        # Calculate new presentation level
-        self.calmodel._calc_level()
-
-        # Save level
-        self._save_sessionpars()
 
 
     #######################

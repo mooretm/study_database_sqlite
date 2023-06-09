@@ -21,7 +21,8 @@ class MainMenu(tk.Menu):
         #self.bind_all('<space>', self._event('<<PlaybackStart>>'))
         #self.bind_all('<Control-c>', self._event('<<PlaybackStop>>'))
         self.bind_all('<Control-q>', self._event('<<FileQuit>>'))
-        self.bind_all('<Control-n>', self._event('<<FileNewStudy>>'))
+        self.bind_all('<Control-a>', self._event('<<FileNewAmendment>>'))
+        self.bind_all('<Control-s>', self._event('<<FileNewStudy>>'))
 
 
     def __init__(self, parent, settings, **kwargs):
@@ -35,14 +36,16 @@ class MainMenu(tk.Menu):
         #############
         file_menu = tk.Menu(self, tearoff=False)
         file_menu.add_command(
-            label="New Record...",
-            command=self._event('<<FileNewStudy>>'),
-            accelerator='Ctrl+N'
+            label="New Amendment...",
+            command=self._event('<<FileNewAmendment>>'),
+            accelerator='Ctrl+A'
         )
-        # file_menu.add_command(
-        #     label="Session Info...",
-        #     command=self._event('<<FileSession>>')
-        # )
+        file_menu.add_separator()
+        file_menu.add_command(
+            label="New Study...",
+            command=self._event('<<FileNewStudy>>'),
+            accelerator='Ctrl+S'
+        )
         file_menu.add_separator()
         file_menu.add_command(
             label="Quit",
@@ -55,18 +58,6 @@ class MainMenu(tk.Menu):
         ############## 
         # Tools menu #
         ##############
-        tools_menu = tk.Menu(self, tearoff=False)
-        tools_menu.add_command(
-            label='Audio Settings...',
-            command=self._event('<<ToolsAudioSettings>>')
-        )
-        tools_menu.add_separator()
-        tools_menu.add_command(
-            label='Calibration...',
-            command=self._event('<<ToolsCalibration>>')
-        )
-        # Add Tools menu to the menubar
-        self.add_cascade(label="Tools", menu=tools_menu)
 
 
         #############
@@ -78,7 +69,7 @@ class MainMenu(tk.Menu):
             command=self.show_about
         )
         help_menu.add_command(
-            label='Help...',
+            label='Documentation...',
             command=self._event('<<Help>>')
         )
         # Add help menu to the menubar

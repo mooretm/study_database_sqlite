@@ -22,10 +22,10 @@ class DBModel:
         disconnecting are always carried out without the user having 
         to remember.
     """
-    def __init__(self):
-        """ Define database path
-        """
-        pass
+    # def __init__(self):
+    #     """ Define database path
+    #     """
+    #     pass
 
 
     #####################
@@ -109,6 +109,25 @@ class DBModel:
         return rows
 
 
+    def update_amendment(self, conn, values):
+        """ Update details in Amendments table.
+        """
+        print(f"\ndbmodel: Updating amendment {values[-1]}...")
+        sql = '''UPDATE Amendments SET submit_date=?, approval_date=?, rationale=?, study_id=? WHERE amend_id=?'''
+        cur = conn.cursor()
+        try:
+            cur.execute(sql, values)
+            conn.commit()
+            print("dbmodel: Done!")
+        except sqlite3.IntegrityError as e:
+            print(f"dbmodel: {e}")
+            messagebox.showerror(
+                title="Request Failed",
+                message="Could not complete request!",
+                detail=f"{e}"
+            ) 
+
+
     def update_study(self, conn, values):
         """ Update details in Studies table.
         """
@@ -127,6 +146,24 @@ class DBModel:
                 detail=f"{e}"
             )
 
+
+    def create_amendment(self, conn, values):
+        """ Add a new amendment to the Amendments table.
+        """
+        print(f"\ndbmodel: Creating new amendment record...")
+        sql = '''INSERT INTO Amendments(submit_date, approval_date, rationale, study_id) VALUES(?,?,?,?)'''
+        cur = conn.cursor()
+        try:
+            cur.execute(sql, values)
+            conn.commit()
+        except sqlite3.IntegrityError as e:
+            print(f"dbmodel: {e}")
+            messagebox.showerror(
+                title="Request Failed",
+                message="Could not complete request!",
+                detail=f"{e}"
+            )
+  
 
     def create_study(self, conn, values):
         """ Add a new study to the Studies table.

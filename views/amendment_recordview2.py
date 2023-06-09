@@ -16,14 +16,13 @@ from widgets import date_entry
 # BEGIN #
 #########
 class AmendmentRecordView(tk.Toplevel):
-    def __init__(self, parent, _task, _amendvars, all_studies, *args, **kwargs):
+    def __init__(self, parent, _task, _amendvars, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
 
         # Assign arguments to variables
         self.parent = parent
         self._task = _task
         self._amendvars = _amendvars
-        self.studynames = sorted([x[2] for x in all_studies])
 
         # Window setup
         self.withdraw()
@@ -50,7 +49,7 @@ class AmendmentRecordView(tk.Toplevel):
         # Create frames #
         #################
         options = {'padx':10, 'pady':10}
-        small_padding = {'padx':5, 'pady':5}
+        small_padding = {'padx':5, 'pady':5, 'sticky':'e'}
 
         # Main container
         self.frm_container = ttk.Frame(self)
@@ -64,6 +63,10 @@ class AmendmentRecordView(tk.Toplevel):
         self.frm_main = ttk.Frame(self.frm_container)
         self.frm_main.grid(column=5, row=10)
 
+        # Rationale
+        self.frm_rationale = ttk.Frame(self.frm_container)
+        self.frm_rationale.grid(column=5, row=12)
+
         # Separator
         ttk.Separator(self.frm_container, orient='horizontal').grid(
             column=5, columnspan=20, row=15, pady=(10,0), sticky='we')
@@ -76,38 +79,35 @@ class AmendmentRecordView(tk.Toplevel):
         ##################
         # Create Widgets #
         ##################
-        # Studies combobox
-        ttk.Label(self.frm_main, text="Study:").grid(column=5,
-            row=5, **small_padding, sticky='e')
-        self.cmbo_study = ttk.Combobox(self.frm_main, 
-            textvariable=self._amendvars['study_name'],
-            values=self.studynames, state='readonly', width=60)
-        self.cmbo_study.grid(column=10, columnspan=20, row=5, sticky='w')
-
-        # Rationale
-        ttk.Label(self.frm_main, text="Rationale:").grid(
-            column=5, row=10, **small_padding, sticky='e')
-        ttk.Entry(self.frm_main, 
-            textvariable=self._amendvars['rationale'], width=63).grid(
-            column=10, columnspan=20, row=10, sticky='w')
+        # Study title/heading
+        ttk.Entry(self.frm_heading, font=('', 11, 'bold'), justify='center',
+            width=50, textvariable=self._amendvars['study_name'],
+            state='disabled').grid(column=5, columnspan=15, row=5, pady=(0,5))
 
         # Date submitted
         ttk.Label(self.frm_main, text="Date Submitted:").grid(
-            column=5, row=15, **small_padding, sticky='e')
+            column=5, row=5, **small_padding)
         date_entry.DateEntry(self.frm_main,
             textvariable=self._amendvars['submit_date']).grid(
-            column=10, row=15, sticky='w')
+            column=10, row=5)
         ttk.Label(self.frm_main, text="(YYYY-MM-DD)").grid(
-            column=11, row=15, sticky='w')       
+            column=15, row=5, **small_padding)       
 
         # Date closed
         ttk.Label(self.frm_main, text="Date Approved:").grid(
-            column=5, row=20, **small_padding)
+            column=5, row=10, **small_padding)
         date_entry.DateEntry(self.frm_main, 
             textvariable=self._amendvars['approval_date']).grid(
-            column=10, row=20, sticky='w')
+            column=10, row=10)
         ttk.Label(self.frm_main, text="(YYYY-MM-DD)").grid(
-            column=11, row=20, sticky='w')
+            column=15, row=10, **small_padding)
+
+        # Rationale
+        ttk.Label(self.frm_rationale, text="Rationale:").grid(
+            column=5, row=15, **small_padding)
+        ttk.Entry(self.frm_rationale, 
+            textvariable=self._amendvars['rationale'], width=70).grid(
+            column=10, row=15)
 
         # Submit button
         ttk.Button(self.frm_button, text="Submit", 
@@ -132,9 +132,9 @@ class AmendmentRecordView(tk.Toplevel):
 
     def _on_submit(self):
         if self._task == 'edit':
-            print("\namendment_recordview: Sending submit amendments edits event...")
+            print("\nstudyview: Sending submit edits event...")
             self.parent.event_generate('<<AmendmentSubmitEdit>>')
         elif self._task == 'new':
-            print("\namendment_recordview: Sending submit new amendment event...")
+            print("\nstudyview: Sending submit new record event...")
             self.parent.event_generate('<<AmendmentSubmitNew>>')
         self.destroy()
